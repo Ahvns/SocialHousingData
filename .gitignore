@@ -1,0 +1,13 @@
+<<<<<<< current
+# hide url and personal api key
+url.do
+
+# hide actual datasets
+*.dta
+=======
+# hide url and personal api key
+url.do
+
+# hide actual datasets
+*.dta
+>>>>>>> before discard
