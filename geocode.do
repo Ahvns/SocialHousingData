@@ -1,5 +1,4 @@
 // geocoding
-replace geocode = 0 if geocode != 1
 
 cap confirm file "sources/geocode.dta"
 if _rc == 0 {
@@ -59,6 +58,15 @@ quietly {
             exit
         }
     }
+    
+    gen pc4copy = pc4
+    destring pc4copy, replace force
+    replace pc6 = "null" if pc4copy < 2600 | pc4copy >3300
+    replace pc5     = regexs(0) if regexm(pc6,"^.....|....")	// extract 5 digit postcode
+    replace pc4     = regexs(0) if regexm(pc6,"^....")	// extract 4 digit postcode
+    replace lat     = "" if pc4copy < 2600 | pc4copy >3300
+    replace lon     = "" if pc4copy < 2600 | pc4copy >3300
+    drop pc4copy
     
     // obtain neighbourhood, district, and municipality from seperate dataset
     n di "Obtaining neighbourhood, district, and municipality names - may take a while!"
