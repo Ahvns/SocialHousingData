@@ -85,6 +85,7 @@ keep adres geocode-wk_naam
 drop freq waittime
 duplicates drop adres, force
 sort adres
+drop if gm_naam==""
 label data "previously geocoded addresses"
 save "sources/geocode.dta", replace
 use "working/complete/verantwoording.dta", clear
