@@ -156,8 +156,6 @@ foreach i of local x {
         // increment iteration
         local ++iteration
         
-        
-        
         // stop program if unsuccessful after three increases
         if `iteration' > 6 {
             n di as error "Could not merge dataset `i'"
@@ -180,6 +178,19 @@ foreach i of local x {
     // drop duplicates
     qui duplicates drop date adres volgorde aantal_reacties positie regdate, force
     drop _merge
+    
+    // double-check for duplicates
+    qui gen id = _n
+    sort adres date
+    qui gen diff = date - date[_n-1] if ///
+        adres == adres[_n-1] & volgorde == volgorde[_n-1] & ///
+        aantal_reacties == aantal_reacties[_n-1] & ///
+        positie == positie[_n-1] & regdate == regdate[_n-1]
+    
+    qui drop if inrange(diff,1,3)
+    di as result r(N_drop) as text " leftover duplicates have been removed"
+    sort id
+    drop id diff
 }
 
 // calculate waiting time
