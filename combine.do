@@ -49,6 +49,7 @@ qui foreach dset of local x {
 
 // merging
 
+// get list of files in working directory
 local x: dir working files "*"
 qui foreach i of local x {
     use "working/`i'", clear
@@ -57,69 +58,118 @@ qui foreach i of local x {
 }
 local x: list x - current
 
+// merge datasets
 foreach i of local x {
-    n di as text ""
+    
+    // display dataset currently being added
+    di as text ""
     di as txt "`i'"
+    local iteration = 1
+    di as text "Iteration " as result `iteration'
+    
+    // merge dataset
     qui merge 1:1 date adres volgorde aantal_reacties positie regdate using "working/`i'"
+    
+    // count overlap
     qui count if _merge==3
     local overlap = `=r(N)'
+    di as text "Overlap: " as result `overlap'
+    
+    // sort observations
     flsort, n(adres) d(date) extra(_merge)
-    local iteration = 1
-    n di as text "Iteration " as result `iteration'
-    n di as text "Overlap: " as result `overlap'
+
+    // decrease date if overlap is too small
     qui while `overlap'< 1200 {
+        
+        // drop observations from added dataset
         drop if _merge==2
         drop _merge
+        
+        // decrease date of observations, skipping weekends
         forvalues it = 1/`iteration' {
             gen weekday = dow(date)
             replace date = date - 1 if inlist(weekday,2,3,4,5)
             replace date = date - 3 if weekday == 1
             drop weekday
         }
+        
+        // merge and sort
         merge 1:1 date adres volgorde aantal_reacties positie regdate using "working/`i'"
         flsort, n(adres) d(date) extra(_merge)
+        
+        // count new overlap
         qui count if _merge==3
         local overlap = `=r(N)'
+        
+        // return dates to previous value
         forvalues it = 1/`=`iteration'' {
             gen weekday = dow(date)
             replace date = date + 1 if inlist(weekday,1,2,3,4)
             replace date = date + 3 if weekday == 5
             drop weekday    
         }
+        
+        // increment iteration
         local ++iteration
+        
+        // display results
         n di as text "Iteration " as result `iteration'
         n di as text "Overlap: " as result `overlap'
+        
+        // stop decreasing date if attempted three times
         if `iteration' > 3 {
             continue, break
         }
     }
+    
+    // increase dates if overlap is too small
     qui while `overlap'< 1200 {
+        
+        // drop observations from added dataset
         drop if _merge==2
         drop _merge
+        
+        // increase dates, skipping weekends
         forvalues it = 1/`=`iteration'-3' {
             gen weekday = dow(date)
             replace date = date + 1 if inlist(weekday,1,2,3,4)
             replace date = date + 3 if weekday == 5
             drop weekday    
         }
+        
+        // merge and sort
         merge 1:1 date adres volgorde aantal_reacties positie regdate using "working/`i'"
         flsort, n(adres) d(date) extra(_merge)
+        
+        // count new overlap
         qui count if _merge==3
         local overlap = `=r(N)'
+        
+        // return dates to previous value
         forvalues it = 1/`=`iteration'-3' {
             gen weekday = dow(date)
             replace date = date - 1 if inlist(weekday,2,3,4,5)
             replace date = date - 3 if weekday == 1
             drop weekday
         }
+        
+        // increment iteration
         local ++iteration
-        n di as text "Iteration " as result `iteration'
-        n di as text "Overlap: " as result `overlap'
+        
+        
+        
+        // stop program if unsuccessful after three increases
         if `iteration' > 6 {
             n di as error "Could not merge dataset `i'"
             exit
         }
+        
+        // display results
+        n di as text "Iteration " as result `iteration'-1
+        n di as text "Overlap: " as result `overlap'
     }
+    
+    // report how dates were changed
     if `iteration' > 4 {
         n di as res "Increased date by " `=`iteration' - 4' " days"
     }
@@ -127,10 +177,12 @@ foreach i of local x {
         n di as res "Decreased date by " `=`iteration'-1' " days"
     }
     
+    // drop duplicates
     qui duplicates drop date adres volgorde aantal_reacties positie regdate, force
     drop _merge
 }
 
+// calculate waiting time
 cap gen waittime = 0
 replace regyear     = year(regdate)
 replace waittime    = (date - regdate) / 365 * 12
