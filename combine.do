@@ -58,13 +58,16 @@ qui foreach i of local x {
 local x: list x - current
 
 foreach i of local x {
+    n di as text ""
     di as txt "`i'"
     qui merge 1:1 date adres volgorde aantal_reacties positie regdate using "working/`i'"
     qui count if _merge==3
     local overlap = `=r(N)'
     flsort, n(adres) d(date) extra(_merge)
     local iteration = 1
-    qui while `overlap'< 100 {
+    n di as text "Iteration " as result `iteration'
+    n di as text "Overlap: " as result `overlap'
+    qui while `overlap'< 1200 {
         drop if _merge==2
         drop _merge
         forvalues it = 1/`iteration' {
@@ -84,11 +87,13 @@ foreach i of local x {
             drop weekday    
         }
         local ++iteration
+        n di as text "Iteration " as result `iteration'
+        n di as text "Overlap: " as result `overlap'
         if `iteration' > 3 {
             continue, break
         }
     }
-    qui while `overlap'< 100 {
+    qui while `overlap'< 1200 {
         drop if _merge==2
         drop _merge
         forvalues it = 1/`=`iteration'-3' {
@@ -108,6 +113,8 @@ foreach i of local x {
             drop weekday
         }
         local ++iteration
+        n di as text "Iteration " as result `iteration'
+        n di as text "Overlap: " as result `overlap'
         if `iteration' > 6 {
             n di as error "Could not merge dataset `i'"
             exit
@@ -115,11 +122,9 @@ foreach i of local x {
     }
     if `iteration' > 4 {
         n di as res "Increased date by " `=`iteration' - 4' " days"
-        n di as text ""
     }
     if inrange(`iteration',2,4) {
         n di as res "Decreased date by " `=`iteration'-1' " days"
-        n di as text ""
     }
     
     qui duplicates drop date adres volgorde aantal_reacties positie regdate, force
