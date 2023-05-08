@@ -63,7 +63,7 @@ foreach i of local x {
     
     // display dataset currently being added
     di as text ""
-    di as txt "`i'"
+    di as txt "Currently adding " as result "`i'"
     local iteration = 1
     di as text "Iteration " as result `iteration'
     
