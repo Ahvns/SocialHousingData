@@ -3,3 +3,6 @@ url.do
 
 # hide actual datasets
 *.dta
+
+# hide old geocode do-file
+geocode_backup.do

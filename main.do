@@ -12,7 +12,7 @@ clear
 
 // geocode dataset
 use "working/complete/verantwoording.dta", clear
-do geocode
+qui do geocode
 
 clear
 
