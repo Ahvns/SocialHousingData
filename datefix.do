@@ -18,7 +18,7 @@ if inlist("`error'", "drop", "report", "fix") {
     qui {
         gen `weekday' = .
         // Obtain first letter of address
-        gen str1 `firstletter' = regexs(0) if regexm(`name',"^.")
+        gen str1 `firstletter' = regexs(0) if regexm(subinstr(`name',"'","",1),"^.")
         // Force all letters to be lowercase
         replace `firstletter' = lower(`firstletter')
         // Encode first letters to numbers for easy comparison

@@ -28,7 +28,8 @@ qui foreach dset of local x {
     lab var huisnr "house number of address"
     
     rename *, lower
-    
+    replace date = date - 1 if dow(date[1])==6	// no new observations in the weekend
+	replace date = date - 2 if dow(date[1])==0
     datefix, error(drop) date(date) name(adres)
     order date
     
@@ -51,6 +52,11 @@ qui foreach dset of local x {
 
 // get list of files in working directory
 local x: dir working files "*"
+local x2 ""
+foreach el of local x {
+	local x2 `el' `x2'
+}
+local x `x2'
 qui foreach i of local x {
     use "working/`i'", clear
     local current `i'
@@ -79,7 +85,7 @@ foreach i of local x {
     flsort, n(adres) d(date) extra(_merge)
 
     // decrease date if overlap is too small
-    qui while `overlap'< 1200 {
+    qui while `overlap'< 1100 {
         
         // drop observations from added dataset
         drop if _merge==2
@@ -94,13 +100,14 @@ foreach i of local x {
         }
         
         // merge and sort
-        merge 1:1 date adres volgorde aantal_reacties positie regdate using "working/`i'"
+        qui merge 1:1 date adres volgorde aantal_reacties positie regdate using "working/`i'"
         flsort, n(adres) d(date) extra(_merge)
         
         // count new overlap
         qui count if _merge==3
         local overlap = `=r(N)'
         
+		
         // return dates to previous value
         forvalues it = 1/`=`iteration'' {
             gen weekday = dow(date)
@@ -108,6 +115,7 @@ foreach i of local x {
             replace date = date + 3 if weekday == 5
             drop weekday    
         }
+		
         
         // increment iteration
         local ++iteration
@@ -123,7 +131,7 @@ foreach i of local x {
     }
     
     // increase dates if overlap is too small
-    qui while `overlap'< 1200 {
+    qui while `overlap'< 1100 {
         
         // drop observations from added dataset
         drop if _merge==2
@@ -145,6 +153,7 @@ foreach i of local x {
         qui count if _merge==3
         local overlap = `=r(N)'
         
+		
         // return dates to previous value
         forvalues it = 1/`=`iteration'-3' {
             gen weekday = dow(date)
@@ -152,27 +161,28 @@ foreach i of local x {
             replace date = date - 3 if weekday == 1
             drop weekday
         }
+		
         
         // increment iteration
         local ++iteration
         
         // stop program if unsuccessful after three increases
-        if `iteration' > 6 {
+        if `iteration' > 8 & `overlap' < 1100{
             n di as error "Could not merge dataset `i'"
             exit
         }
         
         // display results
-        n di as text "Iteration " as result `iteration'-1
+        n di as text "Iteration " as result `iteration'
         n di as text "Overlap: " as result `overlap'
     }
     
     // report how dates were changed
     if `iteration' > 4 {
-        n di as res "Increased date by " `=`iteration' - 4' " days"
+        n di as res "Decreased date of added data by " `=`iteration' - 4' " days"
     }
     if inrange(`iteration',2,4) {
-        n di as res "Decreased date by " `=`iteration'-1' " days"
+        n di as res "Increased date of added data by " `=`iteration'-1' " days"
     }
     
     // drop duplicates

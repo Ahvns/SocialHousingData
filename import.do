@@ -31,6 +31,8 @@ quietly {
 	gen month = month(`today')	// generate variable containing current month
 	gen day = day(`today')	// generate variable containing current day
     gen date = mdy(month,day,year)
+	replace date = date - 1 if dow(date[1])==6	// no new observations in the weekend
+	replace date = date - 2 if dow(date[1])==0
     format date %tdDD_Month_CCYY
 
 
