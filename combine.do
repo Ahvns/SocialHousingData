@@ -1,5 +1,9 @@
 // preparing for merge
 
+tempname minoverlap maxiteration
+sca `minoverlap' = 650
+sca `maxiteration' = 5
+
 local x: dir working files "*"
 qui foreach dset of local x {
     use "working/`dset'", clear
@@ -64,6 +68,7 @@ qui foreach i of local x {
 }
 local x: list x - current
 
+
 // merge datasets
 foreach i of local x {
     
@@ -85,7 +90,7 @@ foreach i of local x {
     flsort, n(adres) d(date) extra(_merge)
 
     // decrease date if overlap is too small
-    qui while `overlap'< 1100 {
+    qui while `overlap'< `minoverlap' {
         
         // drop observations from added dataset
         drop if _merge==2
@@ -125,20 +130,20 @@ foreach i of local x {
         n di as text "Overlap: " as result `overlap'
         
         // stop decreasing date if attempted three times
-        if `iteration' > 3 {
+        if `iteration' > `maxiteration' {
             continue, break
         }
     }
     
     // increase dates if overlap is too small
-    qui while `overlap'< 1100 {
+    qui while `overlap'< `minoverlap' {
         
         // drop observations from added dataset
         drop if _merge==2
         drop _merge
         
         // increase dates, skipping weekends
-        forvalues it = 1/`=`iteration'-3' {
+        forvalues it = 1/`=`iteration'-`maxiteration'' {
             gen weekday = dow(date)
             replace date = date + 1 if inlist(weekday,1,2,3,4)
             replace date = date + 3 if weekday == 5
@@ -155,7 +160,7 @@ foreach i of local x {
         
 		
         // return dates to previous value
-        forvalues it = 1/`=`iteration'-3' {
+        forvalues it = 1/`=`iteration'-`maxiteration'' {
             gen weekday = dow(date)
             replace date = date - 1 if inlist(weekday,2,3,4,5)
             replace date = date - 3 if weekday == 1
@@ -166,24 +171,28 @@ foreach i of local x {
         // increment iteration
         local ++iteration
         
-        // stop program if unsuccessful after three increases
-        if `iteration' > 8 & `overlap' < 1100{
-            n di as error "Could not merge dataset `i'"
-            exit
-        }
         
         // display results
         n di as text "Iteration " as result `iteration'
         n di as text "Overlap: " as result `overlap'
+		
+		 // stop program if unsuccessful after three increases
+        if `iteration' > `=2 * `maxiteration'' & `overlap' < `minoverlap' {
+            n di as error "Could not merge dataset `i'"
+            exit
+        }
     }
     
     // report how dates were changed
-    if `iteration' > 4 {
-        n di as res "Decreased date of added data by " `=`iteration' - 4' " days"
-    }
-    if inrange(`iteration',2,4) {
+    if `iteration' == 1 {
+		n di as res "No change in date of added data"
+	}
+	else if inrange(`iteration',2,`=`maxiteration'+1') {
         n di as res "Increased date of added data by " `=`iteration'-1' " days"
     }
+	else {
+		n di as res "Decreased date of added data by " `=`iteration' - `maxiteration' - 1' " days"
+	}
     
     // drop duplicates
     qui duplicates drop date adres volgorde aantal_reacties positie regdate, force
