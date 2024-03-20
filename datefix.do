@@ -3,7 +3,7 @@ cap program drop datefix
 
 program datefix
 
-syntax , Date(varname) Name(varname) [FLAGmargin(integer 10) ERRor(string) NOChange]
+syntax , Date(varname) Name(varname) [FLAGmargin(integer 17) ERRor(string) NOChange]
 
 // Make report default option if nothing specified
 if "`error'" == "" local error "report"
@@ -25,11 +25,11 @@ if inlist("`error'", "drop", "report", "fix") {
         encode `firstletter', generate(`fl')
         // Flag observation to be a new day if first letter of address is earlier in the alphabet than previous observation's
         gen `newday' = `fl' < `fl'[_n-1]
-        // Do not flag first observation
-        replace `newday' = 0 in 1
+        // Do not flag first ten observations
+        replace `newday' = 0 in 1/10
 
         // Flag observations with potentially wrong dates (e.g. sorting mistake)
-        gen `flag' = `fl' > `flagmargin' & `newday' == 1
+        gen `flag' = inrange(`fl' - `fl'[_n+1],0,`flagmargin') & `newday'[_n+1]
         replace `flag' = `flag'[_n-1] if `newday' == 0
     }
 
@@ -94,8 +94,6 @@ if inlist("`error'", "drop", "report", "fix") {
                 replace `newday' = `newday'>0
                 // Obtain day of the week for each date
                 replace `weekday' = dow(`date')
-                // Change new day flag to two if previous day is a Sunday
-                replace `newday' = 2 if `newday'==1 & `weekday'[_n-1]==0
                 // Change new day flag to three if previous day is a Monday
                 replace `newday' = 3 if `newday'==1 & `weekday'[_n-1]==1
                 // Copy current dates
